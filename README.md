@@ -1,16 +1,16 @@
-\# Satellite Pass Prediction System
+Satellite Pass Prediction System
 
 
 
-A C++ SGP4-based system for satellite orbit propagation, ground-station tracking, pass prediction, and Doppler-shift calculation.
+Predicts satellite passes over a ground station using SGP4 orbit propagation — computing AOS, LOS, maximum elevation, and real-time Doppler shift from live TLE data. Built to understand the full signal chain from orbital mechanics to ground station reception.
 
 
 
-\## Overview
+Overview
 
 
 
-This project takes a satellite Two-Line Element (TLE) set and propagates the satellite orbit using the SGP4 model. The propagated state is then processed through a sequence of coordinate transformations and ground-station calculations to determine whether the satellite is visible from a selected ground station.
+This project takes a satellite Two-Line Element (TLE) set and propagates the satellite orbit using the SGP4 model. The propagated state is processed through a sequence of coordinate transformations and ground-station calculations to determine whether the satellite is visible from a selected ground station.
 
 
 
@@ -18,241 +18,93 @@ The system calculates:
 
 
 
-\- Satellite position and velocity
+Satellite position and velocity
 
-\- Ground-track latitude and longitude
+Ground-track latitude and longitude
 
-\- Ground-station azimuth and elevation
+Ground-station azimuth and elevation
 
-\- Slant range
+Slant range and range rate
 
-\- Range rate
+Received frequency and Doppler shift
 
-\- Received frequency
+Acquisition of Signal (AOS)
 
-\- Doppler shift
+Maximum elevation
 
-\- Acquisition of Signal (AOS)
+Loss of Signal (LOS)
 
-\- Maximum elevation
 
-\- Loss of Signal (LOS)
 
+The simulation generates a complete 24-hour tracking dataset and identifies all satellite passes over the ground station.
 
 
-The simulation can generate a complete 24-hour tracking dataset and identify individual satellite passes over the ground station.
 
+System Architecture
 
+Coordinate Reference Frames
 
-\---
 
 
+The SGP4 propagator outputs the satellite state in the TEME (True Equator, Mean Equinox) reference frame. The system transforms this into ENU (East-North-Up) coordinates relative to the ground station to compute azimuth, elevation, and range.
 
-**## System Architecture**
 
 
+Pass Prediction
 
-```text
 
-&#x20;                   TLE
 
-&#x20;                    |
+Satellite visibility is determined using the elevation angle relative to the ground station:
 
-&#x20;                    v
 
-&#x20;             +-------------+
 
-&#x20;             |     SGP4    |
+Event	Condition
 
-&#x20;             |  propagation|
+AOS (Acquisition of Signal)	Elevation crosses from < 0° to ≥ 0°
 
-&#x20;             +-------------+
+Maximum Elevation	Highest elevation reached during the pass
 
-&#x20;                    |
+LOS (Loss of Signal)	Elevation crosses from ≥ 0° to < 0°
 
-&#x20;                    v
+Doppler Shift
 
-&#x20;                  TEME
 
-&#x20;                    |
 
-&#x20;                    v
+The system calculates the expected Doppler shift of a communication signal using:
 
-&#x20;             TEME -> ECEF
 
-&#x20;                    |
 
-&#x20;                    v
+Transmitted frequency
 
-&#x20;           Ground Station
+Relative range rate between satellite and ground station
 
-&#x20;             Coordinates
+Speed of light
 
-&#x20;                    |
 
-&#x20;                    v
 
-&#x20;             ECEF -> ENU
+For a nominal carrier frequency of 437 MHz, the received frequency varies according to the relative motion between satellite and ground station, allowing the system to estimate the frequency offset a ground station would observe during a pass.
 
-&#x20;                    |
 
-&#x20;         +----------+----------+
 
-&#x20;         |          |          |
+Simulation
 
-&#x20;         v          v          v
 
-&#x20;     Azimuth   Elevation     Range
 
-&#x20;         |          |          |
+The system was tested over a complete 24-hour simulation at one-second resolution:
 
-&#x20;         +----------+----------+
 
-&#x20;                    |
 
-&#x20;                    v
+86,401 time samples covering 0 s → 86,400 s
 
-&#x20;             Range Rate
+Each sample contains: orbital state, tracking geometry, communication parameters, and visibility flags
 
-&#x20;                    |
+Output is logged to CSV and excluded from version control via .gitignore
 
-&#x20;                    v
+Example Pass Result
 
-&#x20;              Doppler Shift
 
-&#x20;                    |
 
-&#x20;                    v
-
-&#x20;            Pass Detection
-
-&#x20;             /           \\
-
-&#x20;           AOS       Maximum Elevation
-
-&#x20;             \\           /
-
-&#x20;                  LOS
-
-
-
-**Coordinate Reference Frames**
-
-
-
-The SGP4 propagator provides the satellite state in the TEME (True Equator, Mean Equinox) reference frame.
-
-
-
-The project therefore performs the following transformation:
-
-&#x09;
-
-TEME
-
-&#x20;|
-
-&#x20;| Earth rotation transformation
-
-&#x20;v
-
-ECEF
-
-&#x20;|
-
-&#x20;| Ground-station relative vector
-
-&#x20;v
-
-ENU
-
-&#x20;|
-
-&#x20;+--> East
-
-&#x20;+--> North
-
-&#x20;+--> Up
-
-&#x20;|
-
-&#x20;+--> Azimuth
-
-&#x20;+--> Elevation
-
-&#x20;+--> Range
-
-The ENU representation is then used to determine the satellite's position relative to the ground station.
-
-
-
-**Pass Prediction**
-
-
-
-Satellite visibility is determined using the elevation angle of the satellite relative to the ground station. 
-
-
-
-The system identifies: 
-
-
-
-Acquisition of Signal (AOS)- The satellite crosses from Elevation < 0°to Elevation >= 0° indicating that the satellite has risen above the local horizon.
-
-Maximum Elevation- During a pass, the system tracks the highest elevation reached by the satellite.
-
-Loss of Signal (LOS)- The satellite crosses from Elevation >= 0°to Elevation < 0° indicating that the satellite has fallen below the horizon.
-
-
-
-**Doppler Shift**
-
-
-
-The system also calculates the expected Doppler shift of a communication signal.
-
-
-
-The calculation uses:
-
-1.Transmitted frequency
-
-2.Relative range rate between satellite and ground station
-
-3.Speed of light
-
-
-
-For a nominal carrier frequency of 437 MHz, the received frequency varies according to the relative motion between the satellite and the ground station.
-
-This allows the system to estimate the frequency offset that a ground station would observe during a pass.
-
-
-
-**Simulation**
-
-
-
-The final system was tested over a complete 24-hour simulation.
-
-The simulation generates one-second tracking samples, resulting in 86,401 time samples covering 0 s -> 86,400 s
-
-The generated CSV contains the calculated orbital, tracking, communication, visibility, and conservation-related parameters for each sample.
-
-
-
-Generated files are intentionally excluded from version control through .gitignore.
-
-
-
-
-
-**## Example Pass Result**
-
-
-
-One of the detected passes produced the following result:
+One detected pass from the 24-hour simulation:
 
 
 
@@ -276,205 +128,169 @@ Time              : 79677 s
 
 Elevation         : 64.09 deg
 
-Azimuth            : 233.62 deg
+Azimuth           : 233.62 deg
 
-Range              : 468.94 km
+Range             : 468.94 km
 
-Range Rate         : 16.47 m/s
+Range Rate        : 16.47 m/s
 
-Doppler Shift      : -24.01 Hz
+Doppler Shift     : -24.01 Hz
 
+Technology Stack
 
+Component	Detail
 
-The complete simulation also identified additional passes during the 24-hour propagation period.
+Language	C++
 
+Orbit Propagation	SGP4 via perturb library
 
+Orbital Data	Two-Line Element (TLE) sets
 
-**## Technology Stack**
+Output	CSV data logging
 
-
-
-1.C++
-
-2.SGP4
-
-3.TLE orbit data
-
-4.perturb library
-
-5.PowerShell / Windows command line
-
-6.CSV data logging
+External Dependency
 
 
 
-**## External Dependency**
+This project uses perturb, a modern C++11 wrapper for SGP4 orbit propagation, developed by Gunvir Ranu (MIT License).
 
 
 
-This project uses perturb, a modern C++11 wrapper for SGP4 orbit propagation, developed by **Gunvir Ranu.**
+perturb handles TLE parsing and SGP4 propagation, providing the satellite state in the TEME reference frame. All coordinate transformations, ground-station geometry, pass detection, and Doppler calculations are implemented independently in this project.
 
 
 
-The external library is used for TLE parsing and SGP4 orbit propagation, providing the satellite state in the TEME reference frame.
-
-The coordinate transformations, ground-station geometry, tracking calculations, pass detection, and Doppler calculations surrounding the propagator are implemented as part of this project.
+Building
 
 
 
-perturb is distributed under the MIT License.
+Note: perturb is an external dependency and must be obtained separately from its repository before building.
 
 
 
-Original repository: https://github.com/gunvirranu/perturb
+After cloning this repository and building perturb, compile with:
 
 
 
-
-
-**## Building**
-
-
-
-This project currently uses the perturb library as an external dependency and is **not included in this repository**.
-
-After cloning this repository, obtain the perturb library separately and build it according to its documentation.
-
-
-
-The project can then be compiled using:
+bash
 
 g++ orbit.cpp -I".\\perturb\\include" -L".\\perturb\\examples\\cmake-local\\build\\build" -lperturb -o orbit\_sgp4
 
 
 
-Run the executable with:
+Run the executable:
+
+
+
+bash
 
 .\\orbit\_sgp4.exe
 
 
 
-The program generates the tracking data and simulation output locally.
+The program generates tracking data and simulation output locally.
 
 
 
-**## Repository Structure**
-
-
+Repository Structure
 
 satellite-pass-prediction-system/
 
-|
+│
 
-+-- .gitignore
+├── .gitignore
 
-+-- README.md
+├── README.md
 
-+-- orbit.cpp
-
-
-
-Generated files such as executables, CSV datasets, and telemetry output are excluded from version control.
+└── orbit.cpp
 
 
 
-**## Development Progression**
+Generated files (executables, CSV datasets, telemetry output) are excluded from version control.
 
 
 
-The final system evolved through several stages.
+Development Progression
 
 
 
-The earlier development stage implemented orbital propagation and coordinate transformations using a numerically integrated orbital model.
+The system evolved through two distinct stages:
 
-This stage was used to understand and validate:
 
-Gravitational acceleration
 
-J2 perturbation
+Stage 1 — Numerical Integration Model
 
-Numerical integration
 
-ECI/ECEF transformations
 
-Ground-station geometry
+An earlier version implemented orbital propagation using a custom numerical integrator. This stage was used to understand and validate:
 
-ENU coordinates
 
-Elevation and azimuth
 
-Range and range rate
+Gravitational acceleration and J2 perturbation
+
+Numerical integration methods
+
+ECI/ECEF coordinate transformations
+
+Ground-station geometry (ENU, azimuth, elevation, range, range rate)
 
 Doppler calculations
 
-Transition to SGP4
+
+
+Stage 2 — SGP4 Transition
 
 
 
-The project was subsequently transitioned to TLE-driven SGP4 propagation.
-
-The final architecture therefore uses a real TLE as the source of orbital state rather than relying on a manually defined initial position and velocity.
+The system was subsequently transitioned to TLE-driven SGP4 propagation. The final architecture uses a real TLE as the orbital state source rather than a manually defined initial position and velocity, significantly improving real-world accuracy.
 
 
 
-**## Limitations**
+Limitations
 
 
 
-This project is a software-based satellite tracking and pass prediction system and should not be interpreted as a flight-qualified spacecraft navigation system.
-
-
-
-Accuracy depends on factors including:
+This is a software-based satellite tracking and pass prediction system and should not be interpreted as a flight-qualified spacecraft navigation system. Accuracy is affected by:
 
 
 
 TLE age and quality
 
-SGP4 model limitations
+SGP4 model assumptions
 
-Coordinate transformation assumptions
+Coordinate transformation precision
 
-Ground-station coordinates
+Ground-station coordinate accuracy
 
-Numerical precision
-
-Atmospheric and environmental effects not represented by the model
+Atmospheric and environmental effects not modelled
 
 Future Improvements
 
-
-
-Possible future extensions include:
-
-
-
 Automated TLE retrieval
 
-Multiple satellite support
-
-Multiple ground stations
+Multiple satellite and ground station support
 
 Configurable elevation masks
 
-Improved Earth orientation modeling
+Improved Earth orientation modelling
 
-Real-time tracking
+Real-time tracking mode
 
 Interactive ground-track visualization
 
-Antenna pointing commands
+Antenna pointing command output
 
-Integration with SDR hardware
+SDR hardware integration
 
 Automated frequency correction based on Doppler prediction
 
-
-
 Author
 
+
+
 Narendran S
+
+ECE Final Year | Embedded Systems \& Space Technology
 
 
 
