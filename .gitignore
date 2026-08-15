@@ -1,0 +1,28 @@
+# External dependency
+perturb/
+
+# Compiled executables
+*.exe
+
+# C/C++ build artifacts
+*.o
+*.obj
+*.out
+
+# Generated simulation data
+orbit.csv
+
+# Generated telemetry output
+output.txt
+
+# VS Code
+.vscode/
+
+# Python cache
+__pycache__/
+
+# Temporary files
+*.tmp
+
+# Local backup
+orbit_final_working_backup.cpp
